@@ -8,13 +8,14 @@ import ListItemIcon from '@material-ui/core/ListItemIcon'
 import ListItemText from '@material-ui/core/ListItemText'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'react-i18next'
-import { StartonButton } from 'components/Core'
 import { makeStyles } from '@material-ui/styles'
 import { useWeb3React } from '@web3-react/core'
 import { Web3Provider } from '@ethersproject/providers'
 import clsx from 'clsx'
-import { injected, portis, walletconnect, walletlink } from './Web3Connectors'
+import Axios from 'axios'
 import { StartonCard } from '../StartonCard'
+import { injected, portis, walletconnect, walletlink } from './Web3Connectors'
+import { StartonButton } from 'components/Core'
 
 type StyleProps = Record<string, string | number>
 type StyleClassKey =
@@ -81,7 +82,7 @@ const useStyles = makeStyles<Theme, StyleProps, StyleClassKey>((theme) => {
 	}
 })
 
-const CardSigning = () => {
+const CardSigning = (props: any) => {
 	//const { classes } = props
 
 	const classes: PropClasses = useStyles({} as StyleProps)
@@ -89,7 +90,6 @@ const CardSigning = () => {
 	const router = useRouter()
 
 	//@ts-ignore
-	const [verified, setVerified] = React.useState<boolean>(false)
 	const [open, setOpen] = React.useState<boolean>(false)
 
 	const context = useWeb3React<Web3Provider>()
@@ -119,8 +119,26 @@ const CardSigning = () => {
 		Object.defineProperties(library?.provider, { isMetaMask: { value: true } })
 
 		try {
-			await library?.getSigner().signMessage('Welcome to Starton' as string)
-			setVerified(true)
+			let signature = null
+			await library
+				?.getSigner()
+				.signMessage('Welcome to Starton' as string)
+				.then((res) => {
+					console.log('address : ', res)
+					signature = res
+				})
+			console.log('signature : ', signature, ' et addresse : ', library?.getSigner())
+			await Axios.post('http://localhost:3000/signin', {
+				signature: signature,
+			})
+				.then((res) => {
+					console.log('retour de signing : ', res)
+					// res.code === 200 ? setCredit(amount) : 0
+				})
+				.catch((e) => {
+					console.log('error : ', e)
+				})
+			props.setVerified(true)
 		} catch (err) {
 			if (connector) {
 				deactivate()
